@@ -5,7 +5,7 @@ class HelloWorldHandler(BaseHTTPRequestHandler):
         self.send_response(200)
         self.send_header('Content-type', 'text/html')
         self.end_headers()
-        self.wfile.write(b'Bootcamp AWS Ignite 2023 Apache!')
+        self.wfile.write(b'Bootcamp AWS Ignite 2023 Python!')
 
 def run_server():
     server_address = ('', 80)
