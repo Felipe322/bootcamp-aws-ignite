@@ -15,6 +15,7 @@ INSTANCE_ID=$(aws ec2 run-instances \
     --image-id $AMI_ID \
     --instance-type $INSTANCE_TYPE \
     --key-name $KEY_NAME \
+    --security-groups $SECURITY_GROUP_NAME \
     --tag-specifications $TAG_APACHE \
     --region $REGION \
     --user-data "file://user_data/ec2-apache.sh") &
@@ -24,6 +25,7 @@ INSTANCE_ID_NODE=$(aws ec2 run-instances \
     --image-id $AMI_ID \
     --instance-type $INSTANCE_TYPE \
     --key-name $KEY_NAME \
+    --security-groups $SECURITY_GROUP_NAME \
     --tag-specifications $TAG_NODE \
     --region $REGION \
     --user-data "file://user_data/ec2-node.sh") &
@@ -33,6 +35,7 @@ INSTANCE_ID_PYTHON=$(aws ec2 run-instances \
     --image-id $AMI_ID \
     --instance-type $INSTANCE_TYPE \
     --key-name $KEY_NAME \
+    --security-groups $SECURITY_GROUP_NAME \
     --tag-specifications $TAG_PYTHON \
     --region $REGION \
     --user-data "file://user_data/ec2-python.sh") &
@@ -72,7 +75,7 @@ PUBLIC_IP_PYTHON=$(aws ec2 describe-instances \
 echo "IP pública: $PUBLIC_IP_PYTHON obtenida de la instancia $INSTANCE_ID_PYTHON."
 
 
-echo "Esperando estatus OK de instancia $INSTANCE_ID."
+echo "Esperando estatus OK de instancia $INSTANCE_ID (Initializing...)."
 
 # Esperar hasta que la instancia esté en estado 'running' antes de conectarse por SSH
 aws ec2 wait instance-status-ok --region $REGION --instance-ids $INSTANCE_ID
