@@ -4,7 +4,7 @@ source ./variables.sh
 
 echo "Creando Key pair: bootcamp-app"
 
-aws ec2 create-key-pair --key-name bootcamp-app > bootcamp-app.pem
+aws ec2 create-key-pair --key-name bootcamp-app --query 'KeyMaterial' --output text > bootcamp-app.pem
 
 chmod 400 bootcamp-app.pem
 
@@ -75,7 +75,7 @@ PUBLIC_IP_PYTHON=$(aws ec2 describe-instances \
 echo "IP pública: $PUBLIC_IP_PYTHON obtenida de la instancia $INSTANCE_ID_PYTHON."
 
 
-echo "Esperando estatus OK de instancia $INSTANCE_ID (Initializing...)."
+echo "Esperando estatus OK de instancia $INSTANCE_ID Initializing..."
 
 # Esperar hasta que la instancia esté en estado 'running' antes de conectarse por SSH
 aws ec2 wait instance-status-ok --region $REGION --instance-ids $INSTANCE_ID
