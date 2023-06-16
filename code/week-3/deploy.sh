@@ -16,7 +16,7 @@ else
     source ./create-ec2.sh
 fi
 
-# source ./create-aurora-db.sh
+source ./create-aurora-db.sh
 
 sleep 5
 

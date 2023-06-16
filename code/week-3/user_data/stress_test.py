@@ -1,13 +1,10 @@
+import threading
 import psycopg2
-import json
-
-from concurrent.futures import ThreadPoolExecutor
-from http.server import HTTPServer, BaseHTTPRequestHandler
 
 # Database connection configuration
-db_host = 'bootcamp-cluster-db'
+db_host = 'bootcamp-cluster-db.cluster-ro-cdvoztklxitw.us-east-1.rds.amazonaws.com'
 db_port = 3306
-db_name = 'bootcamp-db'
+db_name = 'bootcamp-cluster-db'
 db_user = 'bootcamp'
 db_password = 'your_pass'
 
@@ -17,14 +14,11 @@ num_threads = 10
 # Number of queries to execute per thread
 queries_per_thread = 100
 
-# SQL query to stress test the database
-create_db = "CREATE DATABASE bootcamp"
-use_db = "USE bootcamp"
-
-create_table = "CREATE TABLE bootcamp_tabla (id INT(4) NOT NULL AUTO_INCREMENT PRIMARY KEY, name VARCHAR(30))"
-
-# SQL query to stress test the database
-test_query = "SELECT * FROM bootcamp_tabla"
+#SQL query to stress test the database
+#create_db = "CREATE DATABASE bootcamp"
+#use_db = "USE bootcamp"
+#create_table = "CREATE TABLE bootcamp_tabla (id SERIAL PRIMARY KEY, name VARCHAR(30))"
+#test_query = "SELECT * FROM bootcamp_tabla"
 test_query_insert = "INSERT INTO bootcamp_tabla (name) VALUES ('Participante')"
 
 # Variable to store the query results
@@ -38,38 +32,35 @@ def execute_queries():
         dbname=db_name,
         user=db_user,
         password=db_password
-    )
+	)
+
+    if conn.status == psycopg2.extensions.STATUS_READY:
+        print("Successfully connected to the database.")
+
     cursor = conn.cursor()
-    cursor.execute(create_db)
-    cursor.execute(use_db)
-    cursor.execute(create_table)
-    cursor.execute(test_query_insert)
-   
+ #   cursor.execute(create_db)
+ #   cursor.execute(use_db)
+ #   cursor.execute(create_table)
+ #   cursor.execute(test_query_insert)
+
     for _ in range(queries_per_thread):
-        cursor.execute(test_query)
+        cursor.execute(test_query_insert)
         result = cursor.fetchall()
         query_results.extend(result)
+
     cursor.close()
     conn.close()
 
-# Create a thread pool
-with ThreadPoolExecutor(max_workers=num_threads) as executor:
-    # Submit tasks to the thread pool
-    futures = [executor.submit(execute_queries) for _ in range(num_threads)]
+# Create and start the threads
+threads = []
+for _ in range(num_threads):
+    thread = threading.Thread(target=execute_queries)
+    threads.append(thread)
+    thread.start()
 
-# HTTP Server
-class HelloWorldHandler(BaseHTTPRequestHandler):
-    def do_GET(self):
-        self.send_response(200)
-        self.send_header('Content-type', 'application/json')
-        self.end_headers()
-        self.wfile.write(json.dumps(query_results).encode())
+# Wait for all threads to finish
+for thread in threads:
+    thread.join()
 
-def run_server():
-    server_address = ('', 80)
-    httpd = HTTPServer(server_address, HelloWorldHandler)
-    print('Server running on port 80')
-    httpd.serve_forever()
-
-if __name__ == '__main__':
-    run_server()
+# Print the query results
+print(query_results)
