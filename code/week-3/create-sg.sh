@@ -60,4 +60,4 @@ fi
 ## Create and assing policy
 # aws iam create-policy --policy-name bootcampIgniteRDSFullAccessPolicy --policy-document file://bootcampIgniteRDSFullAccessPolicy.json
 
-# aws iam attach-user-policy --user-name fdelgado --policy-arn arn:aws:iam::XXXXXXXXXX:policy/bootcampIgniteRDSFullAccessPolicy
+# aws iam attach-user-policy --user-name user --policy-arn arn:aws:iam::arn:policy/bootcampIgniteRDSFullAccessPolicy

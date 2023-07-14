@@ -6,7 +6,7 @@ db_host = 'bootcamp-cluster-db.cluster-ro-cdvoztklxitw.us-east-1.rds.amazonaws.c
 db_port = 3306
 db_name = 'bootcamp-cluster-db'
 db_user = 'bootcamp'
-db_password = 'your_pass'
+db_password = 'oM!4X1tgom'
 
 # Number of parallel threads
 num_threads = 10
