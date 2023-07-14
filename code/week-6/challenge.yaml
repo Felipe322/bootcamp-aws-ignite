@@ -1,113 +1,163 @@
-Resources:
+# Define parámetros (variables).
+Parameters:
+  PortWordPress:
+    Type: Number
+    Description: Port to show the WordPress app.
+    Default: 80
+  MyCidrIp:
+    Type: String
+    Description: CIDR IP.
+    Default: 0.0.0.0/0
+  AMI:
+    Type: String
+    Description: ID of the EC2 AMI, Ubuntu.
+    Default: ami-0c4f7023847b90238
+  InstanceType:
+    Type: String
+    Description: EC2 instance type.
+    Default: t2.micro
+  VPCID:
+    Type: String
+    Description: ID of the VPC.
+    Default: vpc-0e07703dec4c5175f
+  SubnetId:
+    Type: String
+    Description: ID of the subnet.
+    Default: subnet-0db4dc65e3b43a624
+  AvailabilityZone:
+    Type: String
+    Description: Availability Zone of resources.
+    Default: us-east-1c
 
-  # Este recurso crea un Grupo de Seguridad para la instancia EC2
-  MyEC2SecurityGroup:
+Resources:
+  # Este recurso crea un Grupo de Seguridad para la instancia de WordPress.
+  EC2SecurityGroupWordPress:
     Type: 'AWS::EC2::SecurityGroup'
     Properties:
       GroupDescription: Security Group for EC2 instances WordPress.
-      VpcId: vpc-0e07703dec4c5175f
+      VpcId: !Ref VPCID
       SecurityGroupIngress:
         - IpProtocol: tcp
-          FromPort: 80
-          ToPort: 80
-          CidrIp: 0.0.0.0/0
+          FromPort: !Ref PortWordPress
+          ToPort: !Ref PortWordPress
+          CidrIp: !Ref MyCidrIp
 
-  MyEC2Instance:
+  # Este recurso crea un la instancia de WordPress e inicializa la aplicación.
+  EC2InstanceWordPress:
     Type: 'AWS::EC2::Instance'
     Properties:
-      ImageId: ami-0c4f7023847b90238
-      InstanceType: t2.micro
-      SubnetId: subnet-0db4dc65e3b43a624
+      ImageId: !Ref AMI
+      InstanceType: !Ref InstanceType
+      SubnetId: !Ref SubnetId
       SecurityGroupIds:
-        - !Ref MyEC2SecurityGroup
-      # Script de usuario que se va a ejecutar en la instancia cuando se inicie
+        - !Ref EC2SecurityGroupWordPress
+      # Script que instala y corre la aplicación de WordPress utilizando Docker.
       UserData:
         Fn::Base64: |
           #!/bin/bash
-          apt update
-          apt install git -y
-          apt -y install \
-          ca-certificates \
-          curl \
-          gnupg \
-          lsb-release
-          mkdir -p /etc/apt/keyrings
-          curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
-          echo \
-          "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
-          $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
-          apt update
-          apt install docker-ce docker-ce-cli containerd.io docker-compose-plugin -y
-          docker run -d -p 80:80 wordpress:4.9.5
-      BlockDeviceMappings:                    # Add this section to define the EBS volume
-        - DeviceName: /dev/xvdf               # Specify the device name to attach the EBS volume (example: /dev/xvdf)
+          apt update && apt install -y git
+          git clone https://github.com/Felipe322/bootcamp-aws-ignite.git
+          cd bootcamp-aws-ignite/code/week-6/
+          chmod u+x wordpress-install.sh
+          sh wordpress-install.sh
+      # Se crea un volúmen para el almacenamiento persistente en la instancia.
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvdf
           Ebs:
-            VolumeSize: 10                     # Specify the size of the EBS volume in GB
-            VolumeType: gp2                    # Specify the EBS volume type (example: gp2 for General Purpose SSD)
- 
-  # DatabaseInstance:
-  #   Type: AWS::RDS::DBInstance
-  #   Properties:
-  #     DBName: "blog"
-  #     Engine: MySQL
-  #     MasterUsername: bloguser
-  #     MasterUserPassword: password123
-  #     DBInstanceClass: db.t2.micro
-  #     AllocatedStorage: '5'
-  #     DBSecurityGroups:
-  #       - !Ref DatabaseSG
-  # DatabaseSG:
-  #   Type: AWS::RDS::DBSecurityGroup
-  #   Properties:
-  #     GroupDescription: Security Group for RDS public access
-  #     DBSecurityGroupIngress:
-  #       - CIDRIP: 0.0.0.0/0
-  
+            VolumeSize: 10
+            VolumeType: gp2
 
+  # Se crea un ElasticLoadBalancer para distribuir el tráfico de la app de WordPress.
+  LoadBalancer:
+    Type: 'AWS::ElasticLoadBalancing::LoadBalancer'
+    Properties:
+      CrossZone: true
+      Listeners:
+        -
+          InstancePort: !Ref PortWordPress
+          LoadBalancerPort: !Ref PortWordPress
+          Protocol: HTTP
+      HealthCheck:
+        HealthyThreshold: 2
+        Interval: 30
+        Target: TCP:80
+        Timeout: 10
+        UnhealthyThreshold: 2
+      SecurityGroups:
+        - !Ref EC2SecurityGroupWordPress
+      AvailabilityZones:
+        - !Ref AvailabilityZone
 
-  # MyLoadBalancer:
-  #   Type: "AWS::ElasticLoadBalancing::LoadBalancer"
-  #   Properties:
-  #     Listeners:
-  #       - LoadBalancerPort: 80
-  #         InstancePort: 80
-  #         Protocol: HTTP
-  #     AvailabilityZones:
-  #       - !Ref "AWS::Region"
-  #     HealthCheck:
-  #       Target: "HTTP:80/"
-  #       HealthyThreshold: "3"
-  #       UnhealthyThreshold: "5"
-  #       Interval: "30"
-  #       Timeout: "5"
-  #     Instances:
-  #       - !Ref MyEC2Instance
-  # MyAutoScalingGroup:
-  #   Type: "AWS::AutoScaling::AutoScalingGroup"
-  #   Properties:
-  #     LaunchConfigurationName: !Ref MyLaunchConfiguration
-  #     MinSize: 2
-  #     MaxSize: 5
-  #     DesiredCapacity: 2
-  #     AvailabilityZones:
-  #       - "us-east-1a"
-  #     LoadBalancerNames:
-  #       - !Ref MyLoadBalancer
-  # MyLaunchConfiguration:
-  #   Type: "AWS::AutoScaling::LaunchConfiguration"
-  #   Properties:
-  #     ImageId: "ami-06ca3ca175f37dd66"  # Replace with your desired EC2 AMI ID
-  #     InstanceType: "t2.micro"  # Replace with your desired instance type
-  #     SecurityGroups:
-  #       - !Ref MyEC2SecurityGroup
-  #     # KeyName: "my-key-pair"  # Replace with your key pair name
-  #     UserData:
-  #       Fn::Base64: !Sub |
-  #         #!/bin/bash
-  #         yum update -y
-  #         yum install -y httpd
-  #         echo 'Bootcamp AWS Ignite 2023 Apache!' > /var/www/html/index.html
-  #         systemctl start httpd
-  #         systemctl enable httpd
+  # Se define para que grupo será el ELB.
+  TargetGroup:
+    Type: 'AWS::ElasticLoadBalancingV2::TargetGroup'
+    Properties:
+      Port: !Ref PortWordPress
+      Protocol: HTTP
+      VpcId: !Ref VPCID
+      Targets:
+        - Id: !Ref EC2InstanceWordPress
+          Port: !Ref PortWordPress
 
+  # Se define una base de datos MySQL para almacenar la información de tu aplicación WordPress.
+  DatabaseInstance:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      DBName: "bootcamp"
+      Engine: MySQL
+      MasterUsername: awsignite
+      MasterUserPassword: awsignitepass
+      DBInstanceClass: db.t2.micro
+      AllocatedStorage: '5'
+      DBSecurityGroups:
+        - !Ref DatabaseSG
 
+  # Se crea el security group de la BD.
+  DatabaseSG:
+    Type: AWS::RDS::DBSecurityGroup
+    Properties:
+      GroupDescription: Security Group for RDS public access.
+      DBSecurityGroupIngress:
+        - CIDRIP: !Ref MyCidrIp # Change for IP EC2.
+
+  # Se crea un Auto Scaling Group para definir las reglas del Auto Escalado.
+  AutoScalingGroup:
+    Type: 'AWS::AutoScaling::AutoScalingGroup'
+    Properties:
+      LaunchConfigurationName: !Ref LaunchConfiguration
+      MinSize: 2
+      MaxSize: 5
+      DesiredCapacity: 2
+      AvailabilityZones:
+        - !Ref AvailabilityZone
+      LoadBalancerNames:
+        - !Ref LoadBalancer
+
+  # Se crean las configuraciones del Auto Scaling para manejar la escalabilidad de WordPress. 
+  LaunchConfiguration:
+    Type: 'AWS::AutoScaling::LaunchConfiguration'
+    Properties:
+      ImageId: !Ref AMI
+      InstanceType: !Ref InstanceType
+      SecurityGroups:
+        - !Ref EC2SecurityGroupWordPress
+      # KeyName: "key.pem"
+      UserData:
+        Fn::Base64: |
+          #!/bin/bash
+          apt update && apt install -y git
+          git clone https://github.com/Felipe322/bootcamp-aws-ignite.git
+          cd bootcamp-aws-ignite/code/week-6/
+          chmod u+x wordpress-install.sh
+          sh wordpress-install.sh
+
+Outputs:
+  WordPressURL:
+    Description: URL of the WordPress application
+    Value: !Sub "http://${LoadBalancer.DNSName}/wordpress"
+  DatabaseEndpoint:
+    Description: Endpoint of the MySQL database
+    Value: !GetAtt DatabaseInstance.Endpoint.Address
+  AutoScalingGroup:
+    Description: Auto Scaling group name
+    Value: !Ref AutoScalingGroup

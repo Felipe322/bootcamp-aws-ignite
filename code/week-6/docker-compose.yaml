@@ -5,8 +5,8 @@ services:
     ports:
       - "80:80"
     environment:
-      RDS_USERNAME: bloguser
-      RDS_DB_NAME: blog
-      RDS_PASSWORD: password123
-      RDS_HOSTNAME: blog
+      RDS_USERNAME: awsignite
+      RDS_DB_NAME: bootcamp
+      RDS_PASSWORD: awsignitepass
+      RDS_HOSTNAME: bootcamp # bootcamp-ID.us-east-1c.rds.amazonaws.com#
       RDS_PORT: 5432
