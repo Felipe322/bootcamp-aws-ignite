@@ -1,0 +1,12 @@
+version: '3.2'
+services:
+  app:
+    image: wordpress:4.9.5
+    ports:
+      - "80:80"
+    environment:
+      RDS_USERNAME: bloguser
+      RDS_DB_NAME: blog
+      RDS_PASSWORD: password123
+      RDS_HOSTNAME: blog
+      RDS_PORT: 5432
